@@ -1,0 +1,1 @@
+var json_Wilayah_Rawan_Gempa_8 = {"type":"FeatureCollection","name":"Wilayah_Rawan_Gempa_8","crs":{"type":"name","properties":{"name":"urn:ogc:def:crs:OGC:1.3:CRS84"}},"features":[{"type":"Feature","properties":{"id":null,"Wilayah":"Padang Aro"},"geometry":{"type":"Point","coordinates":[101.251674664690853,-1.550568594636901]}}]}

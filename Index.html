@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kelompok SIG - Analisis Gempa</title>
+  <!-- CSS OpenLayers & QGIS2Web -->
+  <link rel="stylesheet" href="./Peta Kita Test/resources/ol.css">
+  <link rel="stylesheet" href="./Peta Kita Test/resources/ol-layerswitcher.css">
+  <link rel="stylesheet" href="./Peta Kita Test/resources/qgis2web.css">
+  <style>
+    /* Reset & Typography */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background: #f5f5f5;
+      color: #333;
+      line-height: 1.6;
+    }
+    
+    header, footer {
+      background: linear-gradient(135deg, #2c3e50, #1a2533);
+      color: #fff;
+      text-align: center;
+      padding: 1.5rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    
+    header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      letter-spacing: 1px;
+    }
+    
+    header p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+    }
+    
+    nav {
+      background: #34495e;
+      padding: 0.75rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    nav ul {
+      display: flex;
+      justify-content: center;
+      list-style: none;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    nav a {
+      color: #fff;
+      margin: 0 1.5rem;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.3s;
+      padding: 0.5rem 0;
+      position: relative;
+    }
+    
+    nav a:hover {
+      color: #3498db;
+    }
+    
+    nav a::after {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 2px;
+      bottom: 0;
+      left: 0;
+      background-color: #3498db;
+      transition: width 0.3s;
+    }
+    
+    nav a:hover::after {
+      width: 100%;
+    }
+    
+    main {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+    }
+    
+    h2, h3 {
+      color: #2c3e50;
+      margin-bottom: 1rem;
+      position: relative;
+      padding-bottom: 0.5rem;
+    }
+    
+    h2::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      height: 3px;
+      width: 60px;
+      background: linear-gradient(90deg, #3498db, #2980b9);
+    }
+    
+    p {
+      margin-bottom: 1rem;
+    }
+    
+    .section-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+      padding: 2rem;
+      margin-bottom: 2.5rem;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .section-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .map-wrapper {
+      position: relative;
+      margin-top: 1rem;
+    }
+    
+    #map {
+      width: 100%;
+      height: 550px;
+      border-radius: 8px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+    
+    .ol-control > * {
+      background: rgba(255,255,255,0.9) !important;
+      color: #444 !important;
+      border-radius: 4px !important;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+    }
+    
+    /* Upload Section */
+    #upload-section {
+      text-align: center;
+      background: linear-gradient(135deg, #f9f9f9, #f1f1f1);
+    }
+    
+    #folderInput {
+      margin: 1.5rem 0;
+      padding: 0.5rem;
+      border: 2px dashed #ccc;
+      border-radius: 8px;
+      width: 80%;
+      max-width: 500px;
+      background: #fff;
+      transition: border-color 0.3s;
+    }
+    
+    #folderInput:hover {
+      border-color: #3498db;
+    }
+    
+    #showMapBtn {
+      background: #3498db;
+      color: #fff;
+      border: none;
+      padding: 0.8rem 1.6rem;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    #showMapBtn:hover {
+      background: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    /* Legend Dropdown */
+    #legendDropdown {
+      position: absolute;
+      bottom: 15px;
+      left: 15px;
+      z-index: 1000;
+      width: 280px;
+    }
+    
+    #legendDropdown summary {
+      background: rgba(255,255,255,0.9);
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 10px 12px;
+      cursor: pointer;
+      list-style: none;
+      font-weight: 500;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    #legendDropdown summary:after {
+      content: '▼';
+      font-size: 0.8rem;
+      transition: transform 0.3s;
+    }
+    
+    #legendDropdown[open] summary:after {
+      transform: rotate(180deg);
+    }
+    
+    #legendDropdown summary::-webkit-details-marker,
+    #legendDropdown summary::marker {
+      display: none;
+    }
+    
+    #legendDropdown div {
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #e0e0e0;
+      border-top: none;
+      max-height: 250px;
+      overflow-y: auto;
+      padding: 12px;
+      border-radius: 0 0 6px 6px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .legend-item:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+    
+    .legend-item input {
+      margin-right: 10px;
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    
+    .legend-item span {
+      font-size: 0.95rem;
+    }
+    
+    /* Team Section */
+    .team-section {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+      padding: 2rem;
+      margin-top: 3rem;
+    }
+    
+    .team-section h3 {
+      text-align: center;
+      font-size: 1.8rem;
+      margin-bottom: 2rem;
+    }
+    
+    .team-members {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 2rem;
+    }
+    
+    .member-card {
+      background: linear-gradient(145deg, #f9f9f9, #f1f1f1);
+      border-radius: 10px;
+      padding: 1.8rem 1.5rem;
+      text-align: center;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .member-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    
+    .member-card h4 {
+      margin-bottom: 0.5rem;
+      color: #2c3e50;
+      font-size: 1.1rem;
+    }
+    
+    .member-card p {
+      color: #7f8c8d;
+      font-size: 0.95rem;
+    }
+    
+    /* About Section */
+    #about-project ul {
+      margin: 1rem 0 1.5rem 1.5rem;
+    }
+    
+    #about-project li {
+      margin-bottom: 0.8rem;
+      position: relative;
+      padding-left: 0.5rem;
+    }
+    
+    #about-project li::before {
+      content: "•";
+      color: #3498db;
+      font-weight: bold;
+      display: inline-block;
+      width: 1rem;
+      margin-left: -1rem;
+    }
+    
+    /* Analysis Section */
+    #analysis-results {
+      background: linear-gradient(145deg, #fff, #f9f9f9);
+    }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #bbb;
+      border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #999;
+    }
+    
+    /* Footer Enhancements */
+    footer {
+      margin-top: 2rem;
+      padding: 2rem;
+    }
+    
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+      header h1 {
+        font-size: 1.8rem;
+      }
+      
+      nav ul {
+        flex-wrap: wrap;
+      }
+      
+      nav a {
+        margin: 0 0.8rem;
+        font-size: 0.9rem;
+      }
+      
+      .section-card {
+        padding: 1.5rem;
+      }
+      
+      #map {
+        height: 400px;
+      }
+      
+      .team-members {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SIM-G</h1>
+    <p>Sistem Informasi Geografis - Analisis Gempa Kabupaten Solok</p>
+  </header>
+  
+  <nav>
+    <ul>
+      <li><a href="#">Beranda</a></li>
+      <li><a href="#about-project">Tentang Project</a></li>
+      <li><a href="#analysis-results">Hasil Analisa</a></li>
+      <li><a href="#team-section">Tim Kami</a></li>
+      <li><a href="./Map GTA/peta_gempa.html">Peta kami</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <section id="upload-section" class="section-card">
+      <h2>Upload Folder Peta QGIS</h2>
+      <p>Pilih folder yang berisi file peta QGIS untuk menampilkan visualisasi gempa dan fasilitas umum.</p>
+      <input type="file" id="folderInput" webkitdirectory directory multiple>
+      <button id="showMapBtn">Tampilkan Peta</button>
+    </section>
+
+    <section class="section-card map-container">
+      <h2>Peta Dinamis</h2>
+      <p>Visualisasi peta interaktif menampilkan simulasi gempa dan persebaran fasilitas umum.</p>
+      <div class="map-wrapper">
+        <div id="map"></div>
+        <details id="legendDropdown">
+          <summary>Legenda Peta</summary>
+          <div id="legendContent"></div>
+        </details>
+      </div>
+    </section>
+
+    <section id="about-project" class="section-card">
+      <h2>Tentang Project</h2>
+      <p>Project ini merupakan sistem informasi geografis (SIG) yang berfokus pada pemetaan dan analisis risiko gempa bumi serta fasilitas umum di Kabupaten Solok dan Solok Selatan. Sistem ini dirancang untuk memodelkan dan memvisualisasikan simulasi gempa, termasuk radius dampak gempa dan hubungannya dengan infrastruktur dan fasilitas umum di wilayah tersebut.</p>
+      <p>Peta yang dihasilkan dapat digunakan untuk berbagai kebutuhan, seperti:</p>
+      <ul>
+        <li>Analisis kerentanan wilayah terhadap gempa bumi</li>
+        <li>Perencanaan mitigasi bencana</li>
+        <li>Identifikasi fasilitas umum yang berada dalam radius dampak gempa</li>
+        <li>Perencanaan jalur evakuasi dan penempatan pos pengungsian</li>
+      </ul>
+      <p>Sistem ini dilengkapi dengan fitur upload folder peta QGIS yang memudahkan pengguna untuk memvisualisasikan data spasial secara langsung dalam aplikasi berbasis web.</p>
+    </section>
+
+    <section id="analysis-results" class="section-card">
+      <h2>Hasil Analisa</h2>
+      <p>Berdasarkan analisa yang dilakukan pada data spasial yang diupload, sistem ini mampu menghasilkan peta tematik yang dapat digunakan untuk:</p>
+      <ul>
+        <li>Menentukan area potensial yang rentan terhadap guncangan gempa bumi</li>
+        <li>Mengidentifikasi fasilitas umum yang berada dalam radius dampak gempa</li>
+        <li>Memberikan rekomendasi untuk jalur evakuasi dan lokasi pos pengungsian</li>
+        <li>Melakukan analisis keruangan terkait kesiapsiagaan bencana gempa bumi</li>
+      </ul>
+      <p>Data yang digunakan pada peta ini berasal dari berbagai sumber, termasuk hasil-hasil penelitian sebelumnya serta data QGIS yang dimodifikasi sesuai kebutuhan analisis gempa di wilayah Kabupaten Solok dan Solok Selatan.</p>
+    </section>
+
+    <section id="team-section" class="team-section">
+      <h3>Tim Kami</h3>
+      <div class="team-members">
+        <div class="member-card">
+          <h4>AHMAD FAUZAN</h4>
+          <p>2022610070</p>
+        </div>
+        <div class="member-card">
+          <h4>FADHLURAHMAN MUHARAMIN</h4>
+          <p>2022610061</p>
+        </div>
+        <div class="member-card">
+          <h4>MUHAMMAD HAFIZ</h4>
+          <p>2022610033</p>
+        </div>
+        <div class="member-card">
+          <h4>MUHAMMAD AQIL ZAKI</h4>
+          <p>2022610066</p>
+        </div>
+        <div class="member-card">
+          <h4>IMAM ALBANA</h4>
+          <p>2022610067</p>
+        </div>
+      </div>
+    </section>
+  </main>
+  
+  <footer>
+    <p>&copy; 2025 DOA IBU - ITP</p>
+  </footer>
+
+  <script>
+    // Menyimpan file yang diupload
+    const uploadedFiles = {};
+    const folderInput = document.getElementById('folderInput');
+    const showMapBtn = document.getElementById('showMapBtn');
+
+    folderInput.addEventListener('change', e => {
+      const files = Array.from(e.target.files);
+      if (!files.length) return;
+      
+      const base = files[0].webkitRelativePath.split('/')[0] + '/';
+      
+      // Reset file yang diupload sebelumnya
+      Object.keys(uploadedFiles).forEach(key => delete uploadedFiles[key]);
+      
+      // Menyimpan file baru
+      files.forEach(file => {
+        const path = file.webkitRelativePath.replace(base, '');
+        uploadedFiles[path] = file;
+      });
+      
+      alert('Folder terpilih! Klik Tampilkan Peta untuk menampilkan visualisasi.');
+    });
+
+    // Mendapatkan file berdasarkan path
+    function getFile(path) {
+      const file = uploadedFiles[path];
+      if (!file) console.error(`File tidak ditemukan: ${path}`);
+      return file;
+    }
+
+    // Memuat script JavaScript
+    function loadJS(file) {
+      return new Promise((resolve, reject) => {
+        if (!file) return reject('File undefined');
+        
+        const script = document.createElement('script');
+        script.src = URL.createObjectURL(file);
+        script.dataset.dynamic = 'true';
+        script.onload = resolve;
+        script.onerror = () => reject(`Gagal memuat ${file.name || file}`);
+        document.body.appendChild(script);
+      });
+    }
+
+    // Membersihkan script lama
+    function clearOldScripts() {
+      document.querySelectorAll('script[data-dynamic]').forEach(s => s.remove());
+    }
+
+    // Membersihkan legenda
+    function clearLegend() {
+      document.getElementById('legendContent').innerHTML = '';
+    }
+
+    // Menambahkan layer ke legenda
+    function addLegendForLayer(layer) {
+      const legendContent = document.getElementById('legendContent');
+      
+      if (layer instanceof ol.layer.Group) {
+        layer.getLayers().forEach(subLayer => addLegendForLayer(subLayer));
+      } else {
+        let title = layer.get('title') || layer.get('name') || 'Layer';
+        title = title.replace(/>/g, '').trim().split('/').pop().split('.')[0];
+        
+        const item = document.createElement('div');
+        item.className = 'legend-item';
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = layer.getVisible();
+        checkbox.onchange = () => layer.setVisible(checkbox.checked);
+        
+        const label = document.createElement('span');
+        label.textContent = title;
+        
+        item.append(checkbox, label);
+        legendContent.appendChild(item);
+      }
+    }
+
+    // Memuat peta baru
+    async function loadNewMap() {
+      if (!Object.keys(uploadedFiles).length) {
+        alert('Pilih folder QGIS terlebih dahulu!');
+        return;
+      }
+      
+      document.getElementById('map').innerHTML = '';
+      clearOldScripts();
+      clearLegend();
+      
+      try {
+        // Memuat library dan resource
+        await loadJS(getFile('resources/ol.js'));
+        await loadJS(getFile('resources/ol-layerswitcher.js'));
+        await loadJS(getFile('resources/qgis2web_expressions.js'));
+        await loadJS(getFile('resources/functions.js'));
+        
+        // Memuat layer dan style
+        for (const path in uploadedFiles) {
+          if (path.startsWith('layers/') && path.endsWith('.js')) {
+            await loadJS(uploadedFiles[path]);
+          }
+          if (path.startsWith('styles/') && path.endsWith('.js')) {
+            await loadJS(uploadedFiles[path]);
+          }
+        }
+        
+        // Memuat konfigurasi peta
+        await loadJS(getFile('layers/layers.js'));
+        await loadJS(getFile('resources/Autolinker.min.js'));
+        await loadJS(getFile('resources/qgis2web.js'));
+        
+        // Menambahkan layer ke legenda
+        const map = window.map;
+        map.getLayers().getArray().forEach(layer => addLegendForLayer(layer));
+      } catch (error) {
+        console.error('Error saat memuat peta:', error);
+        alert('Gagal memuat peta, silakan periksa konsol untuk detailnya.');
+      }
+    }
+
+    // Menambahkan event listener
+    showMapBtn.addEventListener('click', loadNewMap);
+  </script>
+</body>
+</html>
