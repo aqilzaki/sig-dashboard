@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="resources/ol.css">
+        <link rel="stylesheet" href="resources/fontawesome-all.min.css">
+        <link rel="stylesheet" href="resources/qgis2web.css">
+        <link rel="stylesheet" href="resources/ol-layerswitcher.css">
+        <link rel="stylesheet" href="resources/horsey.min.css">
+        <link rel="stylesheet" href="resources/ol3-search-layer.min.css">
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        /* Styling untuk form panel */
+        #form-container {
+            position: absolute;
+            /* PINDAHKAN FORM KE KIRI ATAS */
+            top: 10px;
+            left: 50px; /* Diganti dari right: 10px */
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+            width: 250px;
+            font-family: Arial, sans-serif;
+        }
+        #form-container h3 {
+            margin-top: 0;
+            font-size: 16px;
+        }
+        #form-container label {
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+        }
+        #form-container input[type="text"], #form-container input[type="number"] {
+            width: calc(100% - 10px);
+            padding: 5px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        #form-container input[type="submit"] {
+            width: 100%;
+            padding: 8px;
+            margin-top: 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        #form-container input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+        /* Style untuk checkbox */
+        .checkbox-label {
+            display: flex; 
+            align-items: center; 
+            margin-top: 15px;
+            font-weight: normal;
+        }
+        .checkbox-label input {
+            width: auto; 
+            margin-right: 8px;
+        }
+        </style>
+        <title></title>
+    </head>
+    <body>
+        <div id="map">
+            <div id="popup" class="ol-popup">
+                <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+                <div id="popup-content"></div>
+            </div>
+        </div>
+
+        <div id="form-container">
+            <h3>Tambahkan Titik Baru</h3>
+            <form id="addFeatureForm">
+                <label for="lon">Longitude:</label>
+                <input type="text" id="lon" name="lon" placeholder="Contoh: 100.354" required>
+                
+                <label for="lat">Latitude:</label>
+                <input type="text" id="lat" name="lat" placeholder="Contoh: -0.947" required>
+                
+                <label class="checkbox-label">
+                    <input type="checkbox" id="createBuffer" name="createBuffer" checked>
+                    Buat Buffer?
+                </label>
+
+                <div id="radius-container">
+                    <label for="radius">Radius Buffer (meter):</label>
+                    <input type="number" id="radius" name="radius" value="500" required>
+                </div>
+                
+                <input type="submit" value="Tambahkan ke Peta">
+            </form>
+        </div>
+
+        <script src="resources/qgis2web_expressions.js"></script>
+        <script src="resources/polyfills.js"></script>
+        <script src="resources/functions.js"></script>
+        <script src="resources/ol.js"></script>
+        <script src="resources/proj4.js"></script>
+        <script src="resources/ol-layerswitcher.js"></script>
+        <script src="resources/horsey.min.js"></script>
+        <script src="resources/Autolinker.min.js"></script>
+        <script src="resources/ol3-search-layer.js"></script>
+        <script src="layers/clusterTawuranKecamatan_1.js"></script>
+        <script src="layers/Buffer_Analysis_2.js"></script>
+        <script src="layers/Sekolah_3.js"></script>
+        <script src="layers/PosPolisi_4.js"></script>
+        <script src="layers/TitikTawuran_5.js"></script>
+        <script src="layers/jarakTawuranPosPolisi_6.js"></script>
+        <script src="styles/clusterTawuranKecamatan_1_style.js"></script>
+        <script src="styles/Buffer_Analysis_2_style.js"></script>
+        <script src="styles/Sekolah_3_style.js"></script>
+        <script src="styles/PosPolisi_4_style.js"></script>
+        <script src="styles/TitikTawuran_5_style.js"></script>
+        <script src="styles/jarakTawuranPosPolisi_6_style.js"></script>
+        <script src="layers/layers.js" type="text/javascript"></script> 
+        <script src="resources/qgis2web.js"></script>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', (event) => {
+                if (typeof map !== 'undefined') {
+                    // 1. BUAT LAYER BARU
+                    const userFeaturesSource = new ol.source.Vector();
+                    const pointStyle = new ol.style.Style({
+                        image: new ol.style.Circle({
+                            radius: 8,
+                            fill: new ol.style.Fill({color: 'rgba(255, 0, 0, 0.8)'}), // Merah
+                            stroke: new ol.style.Stroke({color: 'white', width: 2})
+                        })
+                    });
+                    const bufferStyle = new ol.style.Style({
+                        fill: new ol.style.Fill({ color: 'rgba(255, 255, 0, 0.4)' }), // Kuning transparan
+                        stroke: new ol.style.Stroke({ color: '#ffcc33', width: 2 })
+                    });
+                    const userLayer = new ol.layer.Vector({
+                        source: userFeaturesSource,
+                        style: function(feature) {
+                            const type = feature.getGeometry().getType();
+                            return type === 'Point' ? pointStyle : bufferStyle;
+                        },
+                        title: 'Titik & Buffer Baru',
+                        zIndex: 999
+                    });
+                    map.addLayer(userLayer);
+
+                    // 2. KELOLA TAMPILAN FORM
+                    const createBufferCheckbox = document.getElementById('createBuffer');
+                    const radiusContainer = document.getElementById('radius-container');
+                    const radiusInput = document.getElementById('radius');
+
+                    createBufferCheckbox.addEventListener('change', function() {
+                        if (this.checked) {
+                            radiusContainer.style.display = 'block';
+                            radiusInput.required = true;
+                        } else {
+                            radiusContainer.style.display = 'none';
+                            radiusInput.required = false;
+                        }
+                    });
+
+                    // 3. TANGANI SUBMISI FORM
+                    document.getElementById('addFeatureForm').addEventListener('submit', function(e) {
+                        e.preventDefault();
+
+                        const lon = parseFloat(document.getElementById('lon').value);
+                        const lat = parseFloat(document.getElementById('lat').value);
+                        const shouldCreateBuffer = createBufferCheckbox.checked;
+
+                        if (isNaN(lon) || isNaN(lat)) {
+                            alert("Mohon masukkan nilai koordinat yang valid.");
+                            return;
+                        }
+
+                        const coords = [lon, lat];
+                        const mapCoords = ol.proj.fromLonLat(coords);
+
+                        // Buat dan tambahkan fitur titik
+                        const pointFeature = new ol.Feature({
+                            geometry: new ol.geom.Point(mapCoords),
+                            name: 'Titik Baru'
+                        });
+                        userFeaturesSource.addFeature(pointFeature);
+
+                        // Jika checkbox dicentang, buat juga buffer
+                        if (shouldCreateBuffer) {
+                            const radius = parseFloat(radiusInput.value);
+                            if (isNaN(radius) || radius <= 0) {
+                                alert("Mohon masukkan nilai radius yang valid.");
+                                return;
+                            }
+                            const circleFeature = new ol.Feature({
+                                geometry: new ol.geom.Circle(mapCoords, radius)
+                            });
+                            const circlePolygon = ol.geom.Polygon.fromCircle(circleFeature.getGeometry());
+                            circleFeature.setGeometry(circlePolygon);
+                            userFeaturesSource.addFeature(circleFeature);
+                        }
+                        
+                        // Zoom ke lokasi baru
+                        map.getView().animate({
+                            center: mapCoords,
+                            zoom: 15,
+                            duration: 1500
+                        });
+                    });
+                } else {
+                    console.error("Objek 'map' tidak ditemukan.");
+                }
+            });
+        </script>
+    </body>
+</html>
